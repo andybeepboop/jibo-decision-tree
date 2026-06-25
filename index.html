@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JIBO CPS Decision Tree</title>
+<style>
+  :root {
+    --bg: #F7F6F2;
+    --surface: #FFFFFF;
+    --surface2: #F0EEE9;
+    --border: #DDD9D0;
+    --text: #1A1917;
+    --text2: #5C5A55;
+    --text3: #8C8A85;
+    --accent: #2A52A0;
+    --accent-light: #E8EDF8;
+    --accent-mid: #4A72C0;
+    --t1: #7B3FA0;  /* trigger purple */
+    --t1-l: #F2EBF8;
+    --t2: #A05B00;  /* trigger amber */
+    --t2-l: #FDF3E3;
+    --t3: #A03030;  /* trigger red */
+    --t3-l: #FCEAEA;
+    --t4: #1A7A5E;  /* trigger teal */
+    --t4-l: #E5F5F0;
+    --t5: #1A5A8A;  /* trigger blue */
+    --t5-l: #E5F0FA;
+    --pisa-a: #2A52A0;
+    --pisa-a-l: #E8EDF8;
+    --pisa-b: #5A2A8A;
+    --pisa-b-l: #EDE5F8;
+    --pisa-c: #1A7A5E;
+    --pisa-c-l: #E5F5F0;
+    --pisa-d: #8A5A00;
+    --pisa-d-l: #F8F0E0;
+    --radius: 8px;
+    --radius-lg: 14px;
+    --font: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+
+  .header-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+
+  .header-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 1px;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid #C0CCE8;
+    white-space: nowrap;
+  }
+
+  /* LAYOUT */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr 300px;
+    height: calc(100vh - 56px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .panel-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  /* TRIGGER BUTTONS */
+  .trigger-btn {
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .trigger-btn:hover { border-color: var(--accent-mid); background: var(--surface2); }
+  .trigger-btn.active { border-color: var(--accent); background: var(--accent-light); }
+
+  .trigger-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+
+  .trigger-btn-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .trigger-btn-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* PHASE SELECTOR */
+  .phase-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .phase-btn {
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .phase-btn:hover { border-color: var(--accent-mid); background: var(--surface2); }
+  .phase-btn.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+  .phase-num {
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: var(--text3);
+  }
+
+  .phase-btn.active .phase-num {
+    background: var(--accent);
+    color: white;
+  }
+
+  /* PISA LEGEND */
+  .pisa-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .pisa-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .pisa-legend-item:hover { background: var(--surface2); border-color: var(--border); }
+
+  .pisa-legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* CENTER — TREE */
+  .center-panel {
+    overflow-y: auto;
+    padding: 2rem;
+  }
+
+  .tree-intro {
+    margin-bottom: 1.5rem;
+  }
+
+  .tree-intro h2 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .tree-intro p {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  /* TREE NODES */
+  .tree-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* LAYER 0: PRE-CHECK */
+  .precheck-node {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .node-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 3px;
+  }
+
+  .precheck-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--radius);
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .precheck-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .precheck-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 1px;
+  }
+
+  /* CONNECTOR */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 32px;
+    position: relative;
+  }
+
+  .connector-line {
+    width: 1.5px;
+    height: 100%;
+    background: var(--border);
+  }
+
+  .connector-label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: calc(50% + 6px);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text3);
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* LAYER 1: TRIGGER */
+  .trigger-node {
+    border-radius: var(--radius-lg);
+    padding: 14px 18px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1.5px solid transparent;
+  }
+
+  .trigger-node:hover { transform: translateX(2px); }
+  .trigger-node.expanded { border-color: var(--accent); }
+
+  .trigger-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .trigger-id {
+    font-size: 11px;
+    font-weight: 700;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+  }
+
+  .trigger-info { flex: 1; }
+
+  .trigger-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .trigger-signal {
+    font-size: 11px;
+    color: var(--text2);
+    margin-top: 2px;
+  }
+
+  .trigger-arrow {
+    font-size: 16px;
+    color: var(--text3);
+    transition: transform 0.2s;
+  }
+
+  .trigger-node.expanded .trigger-arrow { transform: rotate(90deg); }
+
+  /* DIAGNOSTIC SUBTREE */
+  .diagnostic-tree {
+    margin-top: 10px;
+    margin-left: 40px;
+    display: none;
+  }
+
+  .trigger-node.expanded .diagnostic-tree { display: block; }
+
+  .diag-question {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    position: relative;
+  }
+
+  .diag-question::before {
+    content: '';
+    position: absolute;
+    left: -20px;
+    top: 16px;
+    width: 16px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .diag-q-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .diag-q-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .diag-branches {
+    margin-left: 16px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .diag-branch {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+
+  .diag-branch::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 16px;
+    width: 20px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .diag-branch:hover { border-color: var(--accent-mid); background: var(--accent-light); }
+
+  .branch-answer {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--surface2);
+    color: var(--text3);
+    white-space: nowrap;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .branch-text {
+    font-size: 12px;
+    color: var(--text2);
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .branch-pisa {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 3px;
+  }
+
+  .pisa-chip {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: var(--font-mono);
+  }
+
+  .pisa-chip:hover { opacity: 0.75; }
+
+  /* PISA DIMENSION COLORS */
+  .pisa-A { background: var(--pisa-a-l); color: var(--pisa-a); }
+  .pisa-B { background: var(--pisa-b-l); color: var(--pisa-b); }
+  .pisa-C { background: var(--pisa-c-l); color: var(--pisa-c); }
+  .pisa-D { background: var(--pisa-d-l); color: var(--pisa-d); }
+
+  /* RIGHT PANEL — DETAIL */
+  .right-panel {
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 1.25rem;
+  }
+
+  .detail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text3);
+    text-align: center;
+    gap: 10px;
+    padding: 2rem;
+  }
+
+  .detail-empty-icon {
+    font-size: 32px;
+    opacity: 0.4;
+  }
+
+  .detail-empty p {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .detail-content { display: none; }
+  .detail-content.visible { display: block; }
+
+  .detail-header {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-cell-id {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .detail-cell-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .detail-cell-dim {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  .detail-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .detail-section-title {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+
+  .detail-section p, .detail-section li {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+
+  .detail-section ul {
+    padding-left: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .observable-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    background: var(--surface2);
+    margin: 2px 2px 2px 0;
+    line-height: 1.4;
+  }
+
+  .utterance-box {
+    background: var(--accent-light);
+    border: 1px solid #C0CCE8;
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--accent);
+    line-height: 1.6;
+    font-style: italic;
+    margin-bottom: 6px;
+  }
+
+  .utterance-label {
+    font-size: 10px;
+    font-weight: 600;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    opacity: 0.7;
+  }
+
+  .trigger-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin: 2px 2px 2px 0;
+    font-weight: 500;
+  }
+
+  .coverage-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .coverage-cell {
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-align: center;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    border: 1.5px solid transparent;
+  }
+
+  .coverage-cell:hover { opacity: 0.75; }
+  .coverage-cell.selected { border-color: var(--text); }
+
+  /* SCROLL BARS */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* PHASE FILTER ACTIVE */
+  .phase-filtered .trigger-node { opacity: 0.4; transition: opacity 0.2s; }
+  .phase-filtered .trigger-node.phase-match { opacity: 1; }
+
+  /* RESPONSIVE NOTE */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; height: auto; }
+    .left-panel, .right-panel { height: auto; max-height: 300px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">J</div>
+    <div>
+      <div class="header-title">JIBO CPS Decision Tree</div>
+      <div class="header-sub">PISA 2015 Collaborative Problem-Solving Framework</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge">v0.1 — Structure Draft</span>
+    <span class="badge">12 PISA cells</span>
+    <span class="badge">5 triggers</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+
+    <!-- TRIGGER FILTER -->
+    <div>
+      <div class="panel-section-title">Filter by trigger</div>
+      <button class="trigger-btn active" onclick="filterTrigger('all')" id="filter-all">
+        <div class="trigger-dot" style="background:#888"></div>
+        <div>
+          <div class="trigger-btn-label">All triggers</div>
+          <div class="trigger-btn-sub">Show full decision tree</div>
+        </div>
+      </button>
+      <button class="trigger-btn" onclick="filterTrigger('T1')" id="filter-T1">
+        <div class="trigger-dot" style="background:var(--t1)"></div>
+        <div>
+          <div class="trigger-btn-label">T1 — Sustained silence</div>
+          <div class="trigger-btn-sub">No speech &gt;8–10s</div>
+        </div>
+      </button>
+      <button class="trigger-btn" onclick="filterTrigger('T2')" id="filter-T2">
+        <div class="trigger-dot" style="background:var(--t2)"></div>
+        <div>
+          <div class="trigger-btn-label">T2 — Turn imbalance</div>
+          <div class="trigger-btn-sub">One child dominates speech</div>
+        </div>
+      </button>
+      <button class="trigger-btn" onclick="filterTrigger('T3')" id="filter-T3">
+        <div class="trigger-dot" style="background:var(--t3)"></div>
+        <div>
+          <div class="trigger-btn-label">T3 — Verbal conflict</div>
+          <div class="trigger-btn-sub">Disagreement / negative affect</div>
+        </div>
+      </button>
+      <button class="trigger-btn" onclick="filterTrigger('T4')" id="filter-T4">
+        <div class="trigger-dot" style="background:var(--t4)"></div>
+        <div>
+          <div class="trigger-btn-label">T4 — Task stall</div>
+          <div class="trigger-btn-sub">No speech + no manipulation</div>
+        </div>
+      </button>
+      <button class="trigger-btn" onclick="filterTrigger('T5')" id="filter-T5">
+        <div class="trigger-dot" style="background:var(--t5)"></div>
+        <div>
+          <div class="trigger-btn-label">T5 — Parallel work</div>
+          <div class="trigger-btn-sub">Both building, no cross-talk</div>
+        </div>
+      </button>
+    </div>
+
+    <!-- PHASE FILTER -->
+    <div>
+      <div class="panel-section-title">Filter by task phase</div>
+      <div class="phase-group">
+        <button class="phase-btn active" onclick="filterPhase('all')" id="phase-all">
+          <div class="phase-num">—</div>
+          All phases
+        </button>
+        <button class="phase-btn" onclick="filterPhase('P1')" id="phase-P1">
+          <div class="phase-num">1</div>
+          Orientation
+        </button>
+        <button class="phase-btn" onclick="filterPhase('P2')" id="phase-P2">
+          <div class="phase-num">2</div>
+          Planning
+        </button>
+        <button class="phase-btn" onclick="filterPhase('P3')" id="phase-P3">
+          <div class="phase-num">3</div>
+          Building
+        </button>
+        <button class="phase-btn" onclick="filterPhase('P4')" id="phase-P4">
+          <div class="phase-num">4</div>
+          Reviewing
+        </button>
+      </div>
+    </div>
+
+    <!-- PISA LEGEND -->
+    <div>
+      <div class="panel-section-title">PISA cells — click to inspect</div>
+      <div class="pisa-legend">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;padding:0 8px;">Row A — Exploring & understanding</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('A1')"><div class="pisa-legend-dot" style="background:var(--pisa-a)"></div>A1 · Discovering perspectives & abilities</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('A2')"><div class="pisa-legend-dot" style="background:var(--pisa-a)"></div>A2 · Discovering interaction type & goals</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('A3')"><div class="pisa-legend-dot" style="background:var(--pisa-a)"></div>A3 · Understanding roles to solve problem</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;margin-bottom:4px;padding:0 8px;">Row B — Representing & formulating</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('B1')"><div class="pisa-legend-dot" style="background:var(--pisa-b)"></div>B1 · Building shared representation</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('B2')"><div class="pisa-legend-dot" style="background:var(--pisa-b)"></div>B2 · Identifying & describing tasks</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('B3')"><div class="pisa-legend-dot" style="background:var(--pisa-b)"></div>B3 · Describing roles & team organisation</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;margin-bottom:4px;padding:0 8px;">Row C — Planning & executing</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('C1')"><div class="pisa-legend-dot" style="background:var(--pisa-c)"></div>C1 · Communicating about actions</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('C2')"><div class="pisa-legend-dot" style="background:var(--pisa-c)"></div>C2 · Enacting plans</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('C3')"><div class="pisa-legend-dot" style="background:var(--pisa-c)"></div>C3 · Following rules of engagement</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;margin-bottom:4px;padding:0 8px;">Row D — Monitoring & reflecting</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('D1')"><div class="pisa-legend-dot" style="background:var(--pisa-d)"></div>D1 · Monitoring shared understanding</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('D2')"><div class="pisa-legend-dot" style="background:var(--pisa-d)"></div>D2 · Monitoring results & evaluating success</div>
+        <div class="pisa-legend-item" onclick="showPisaDetail('D3')"><div class="pisa-legend-dot" style="background:var(--pisa-d)"></div>D3 · Monitoring, feedback & adapting roles</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CENTER PANEL -->
+  <div class="center-panel">
+    <div class="tree-intro">
+      <h2>Decision tree — real-time CPS diagnosis</h2>
+      <p>JIBO observes → detects a trigger → runs 2–3 diagnostic checks → maps to a PISA cell → produces a grounded utterance. Click any trigger to expand its diagnostic branch. Click a PISA chip to inspect the cell detail in the right panel.</p>
+    </div>
+
+    <div class="tree-container" id="tree">
+
+      <!-- PRE-CHECK NODE -->
+      <div class="precheck-node">
+        <div class="precheck-icon">👁</div>
+        <div>
+          <div class="node-eyebrow">Global pre-check</div>
+          <div class="precheck-title">JIBO observing dyad</div>
+          <div class="precheck-sub">Continuous monitoring of audio + vision streams</div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div><div class="connector-label">signal detected</div></div>
+
+      <!-- T1 -->
+      <div class="trigger-node" id="node-T1" data-trigger="T1" data-phases="P1 P2 P3 P4" style="background:var(--t1-l); border-color: #D5C5E0;" onclick="toggleTrigger('T1')">
+        <div class="trigger-header">
+          <div class="trigger-id" style="background:var(--t1);color:white;">T1</div>
+          <div class="trigger-info">
+            <div class="trigger-name">Sustained silence</div>
+            <div class="trigger-signal">Signal: no speech from either child &gt; 8–10 seconds</div>
+          </div>
+          <div class="trigger-arrow">›</div>
+        </div>
+
+        <div class="diagnostic-tree" id="diag-T1">
+          <div style="width:1px;height:12px;background:var(--border);margin-left:12px;"></div>
+
+          <div class="diag-question">
+            <div class="diag-q-label">Diagnostic check 1</div>
+            <div class="diag-q-text">Have the children verbalized a shared goal yet? (Any utterance stating what they intend to build or what the task means to them.)</div>
+          </div>
+
+          <div style="width:1px;height:8px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-branches" style="border-left:1px solid var(--border);padding-left:8px;margin-left:12px;">
+            <div class="diag-branch" onclick="showPisaDetail('A2');event.stopPropagation()">
+              <span class="branch-answer">No</span>
+              <div>
+                <div class="branch-text">No shared goal stated yet — they don't know what they're working toward together</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-A" onclick="showPisaDetail('A2');event.stopPropagation()">A2</span></div>
+              </div>
+            </div>
+
+            <div style="font-size:11px;color:var(--text3);padding:4px 12px;">If yes → further check:</div>
+
+            <div style="padding-left:16px;border-left:1px solid var(--border);display:flex;flex-direction:column;gap:4px;">
+              <div style="font-size:11px;color:var(--text2);padding:4px 0;">Are they stuck on <em>what</em> to do, or on <em>how</em> to coordinate?</div>
+              <div class="diag-branch" onclick="showPisaDetail('B2');event.stopPropagation()">
+                <span class="branch-answer">What</span>
+                <div>
+                  <div class="branch-text">Can't identify the specific task or next step to complete</div>
+                  <div class="branch-pisa"><span class="pisa-chip pisa-B" onclick="showPisaDetail('B2');event.stopPropagation()">B2</span></div>
+                </div>
+              </div>
+              <div class="diag-branch" onclick="showPisaDetail('B3');event.stopPropagation()">
+                <span class="branch-answer">How</span>
+                <div>
+                  <div class="branch-text">Task is clear but no protocol for who does what</div>
+                  <div class="branch-pisa"><span class="pisa-chip pisa-B" onclick="showPisaDetail('B3');event.stopPropagation()">B3</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- T2 -->
+      <div class="trigger-node" id="node-T2" data-trigger="T2" data-phases="P2 P3 P4" style="background:var(--t2-l); border-color:#E0D5C0;" onclick="toggleTrigger('T2')">
+        <div class="trigger-header">
+          <div class="trigger-id" style="background:var(--t2);color:white;">T2</div>
+          <div class="trigger-info">
+            <div class="trigger-name">Turn imbalance</div>
+            <div class="trigger-signal">Signal: one child has &gt;70% of speech turns; partner consistently silent</div>
+          </div>
+          <div class="trigger-arrow">›</div>
+        </div>
+
+        <div class="diagnostic-tree" id="diag-T2">
+          <div style="width:1px;height:12px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-question">
+            <div class="diag-q-label">Diagnostic check 1</div>
+            <div class="diag-q-text">Is the quieter child physically engaged (handling pieces, building) or fully passive (not touching anything)?</div>
+          </div>
+          <div style="width:1px;height:8px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-branches" style="border-left:1px solid var(--border);padding-left:8px;margin-left:12px;">
+            <div class="diag-branch" onclick="showPisaDetail('C3');event.stopPropagation()">
+              <span class="branch-answer">Passive</span>
+              <div>
+                <div class="branch-text">Quiet child has disengaged from the task entirely — team isn't prompting them</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-C" onclick="showPisaDetail('C3');event.stopPropagation()">C3</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('A1');event.stopPropagation()">
+              <span class="branch-answer">Building</span>
+              <div>
+                <div class="branch-text">Quiet child is building independently — dominant child unaware of partner's ideas or abilities</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-A" onclick="showPisaDetail('A1');event.stopPropagation()">A1</span> <span style="font-size:11px;color:var(--text3)">→ routes to T5</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- T3 -->
+      <div class="trigger-node" id="node-T3" data-trigger="T3" data-phases="P2 P3 P4" style="background:var(--t3-l); border-color:#E0C5C5;" onclick="toggleTrigger('T3')">
+        <div class="trigger-header">
+          <div class="trigger-id" style="background:var(--t3);color:white;">T3</div>
+          <div class="trigger-info">
+            <div class="trigger-name">Verbal conflict / negative affect</div>
+            <div class="trigger-signal">Signal: raised voices, "no," "stop," "that's wrong," overlapping rejection</div>
+          </div>
+          <div class="trigger-arrow">›</div>
+        </div>
+
+        <div class="diagnostic-tree" id="diag-T3">
+          <div style="width:1px;height:12px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-question">
+            <div class="diag-q-label">Diagnostic check 1</div>
+            <div class="diag-q-text">What is the conflict about?</div>
+          </div>
+          <div style="width:1px;height:8px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-branches" style="border-left:1px solid var(--border);padding-left:8px;margin-left:12px;">
+            <div class="diag-branch" onclick="showPisaDetail('B1');event.stopPropagation()">
+              <span class="branch-answer">Design</span>
+              <div>
+                <div class="branch-text">Disagreement about what to build, how it should look, or which idea to use</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-B" onclick="showPisaDetail('B1');event.stopPropagation()">B1</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('B3');event.stopPropagation()">
+              <span class="branch-answer">Control</span>
+              <div>
+                <div class="branch-text">Conflict about whose turn it is, who's in charge, who decides</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-B" onclick="showPisaDetail('B3');event.stopPropagation()">B3</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('D1');event.stopPropagation()">
+              <span class="branch-answer">Evaluation</span>
+              <div>
+                <div class="branch-text">Disagreement about whether current approach is working or what the problem requires</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-D" onclick="showPisaDetail('D1');event.stopPropagation()">D1</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('D3');event.stopPropagation()">
+              <span class="branch-answer">Roles</span>
+              <div>
+                <div class="branch-text">Late-task conflict where team structure has broken down and needs active repair</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-D" onclick="showPisaDetail('D3');event.stopPropagation()">D3</span> <span style="font-size:11px;color:var(--text3)">(P3–P4 only)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- T4 -->
+      <div class="trigger-node" id="node-T4" data-trigger="T4" data-phases="P2 P3 P4" style="background:var(--t4-l); border-color:#C5E0D8;" onclick="toggleTrigger('T4')">
+        <div class="trigger-header">
+          <div class="trigger-id" style="background:var(--t4);color:white;">T4</div>
+          <div class="trigger-info">
+            <div class="trigger-name">Task stall — both idle</div>
+            <div class="trigger-signal">Signal: no speech AND no physical manipulation from either child</div>
+          </div>
+          <div class="trigger-arrow">›</div>
+        </div>
+
+        <div class="diagnostic-tree" id="diag-T4">
+          <div style="width:1px;height:12px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-question">
+            <div class="diag-q-label">Diagnostic check 1</div>
+            <div class="diag-q-text">What immediately preceded the stall?</div>
+          </div>
+          <div style="width:1px;height:8px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-branches" style="border-left:1px solid var(--border);padding-left:8px;margin-left:12px;">
+            <div class="diag-branch" onclick="showPisaDetail('D2');event.stopPropagation()">
+              <span class="branch-answer">Subtask done</span>
+              <div>
+                <div class="branch-text">They just completed a section — need to evaluate and plan what comes next</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-D" onclick="showPisaDetail('D2');event.stopPropagation()">D2</span> <span class="pisa-chip pisa-C" onclick="showPisaDetail('C2');event.stopPropagation()">C2</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('C1');event.stopPropagation()">
+              <span class="branch-answer">Confusion</span>
+              <div>
+                <div class="branch-text">Neither child knows what to do next — haven't communicated a next action</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-C" onclick="showPisaDetail('C1');event.stopPropagation()">C1</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('D1');event.stopPropagation()">
+              <span class="branch-answer">Post-conflict</span>
+              <div>
+                <div class="branch-text">Stall follows a conflict — shared understanding has broken down and not been repaired</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-D" onclick="showPisaDetail('D1');event.stopPropagation()">D1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div></div>
+
+      <!-- T5 -->
+      <div class="trigger-node" id="node-T5" data-trigger="T5" data-phases="P1 P2 P3 P4" style="background:var(--t5-l); border-color:#C5D5E5;" onclick="toggleTrigger('T5')">
+        <div class="trigger-header">
+          <div class="trigger-id" style="background:var(--t5);color:white;">T5</div>
+          <div class="trigger-info">
+            <div class="trigger-name">Parallel work / no coordination</div>
+            <div class="trigger-signal">Signal: each child building independently; no cross-talk, no gaze toward partner</div>
+          </div>
+          <div class="trigger-arrow">›</div>
+        </div>
+
+        <div class="diagnostic-tree" id="diag-T5">
+          <div style="width:1px;height:12px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-question">
+            <div class="diag-q-label">Diagnostic check 1 — Phase-gated</div>
+            <div class="diag-q-text">What is the current task phase?</div>
+          </div>
+          <div style="width:1px;height:8px;background:var(--border);margin-left:12px;"></div>
+          <div class="diag-branches" style="border-left:1px solid var(--border);padding-left:8px;margin-left:12px;">
+            <div class="diag-branch" onclick="showPisaDetail('A3');event.stopPropagation()">
+              <span class="branch-answer" style="background:#E8EDF8;color:var(--accent);">P1–P2</span>
+              <div>
+                <div class="branch-text">Early phase — children haven't established who does what or that they need to work together</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-A" onclick="showPisaDetail('A3');event.stopPropagation()">A3</span> <span class="pisa-chip pisa-B" onclick="showPisaDetail('B3');event.stopPropagation()">B3</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('C1');event.stopPropagation()">
+              <span class="branch-answer" style="background:#E5F5F0;color:var(--pisa-c);">P3</span>
+              <div>
+                <div class="branch-text">Mid-task — roles existed but communication has dropped out during active building</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-C" onclick="showPisaDetail('C1');event.stopPropagation()">C1</span> <span class="pisa-chip pisa-C" onclick="showPisaDetail('C3');event.stopPropagation()">C3</span></div>
+              </div>
+            </div>
+            <div class="diag-branch" onclick="showPisaDetail('D3');event.stopPropagation()">
+              <span class="branch-answer" style="background:#F8F0E0;color:var(--pisa-d);">P4</span>
+              <div>
+                <div class="branch-text">Late task — team organisation has drifted; review phase needs joint reflection</div>
+                <div class="branch-pisa"><span class="pisa-chip pisa-D" onclick="showPisaDetail('D3');event.stopPropagation()">D3</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tree-container -->
+  </div>
+
+  <!-- RIGHT PANEL — PISA DETAIL -->
+  <div class="right-panel" id="right-panel">
+
+    <div class="detail-empty" id="detail-empty">
+      <div class="detail-empty-icon">◻</div>
+      <p>Click any PISA chip in the tree, or a cell in the legend, to see its full description, observable behaviors, and sample JIBO utterances.</p>
+    </div>
+
+    <div class="detail-content" id="detail-content">
+      <!-- Filled by JS -->
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+const PISA = {
+  A1: {
+    dim: 'A · Exploring and understanding',
+    col: 'pisa-A',
+    colvar: 'var(--pisa-a)',
+    coll: 'var(--pisa-a-l)',
+    name: 'Discovering perspectives and abilities of team members',
+    description: 'Children learn what each teammate knows, can do, and brings to the task. In a dyad, this means each child understands the other\'s ideas, preferences, and skills relevant to the Lego task.',
+    observables: [
+      'One child building while the other watches passively',
+      'Dominant child never asks partner\'s opinion or preference',
+      'Partner attempts a contribution that goes unacknowledged',
+      'Mismatch between who has an idea and who physically acts',
+    ],
+    triggers: ['T2'],
+    utterances: [
+      { label: 'Maze task', text: 'Hey [Partner], what do you think about the pathway direction? I\'d love to hear your idea.' },
+      { label: 'Park task', text: 'What kind of things do you want to put in the park? [Partner], what are you thinking?' },
+    ],
+  },
+  A2: {
+    dim: 'A · Exploring and understanding',
+    col: 'pisa-A',
+    colvar: 'var(--pisa-a)',
+    coll: 'var(--pisa-a-l)',
+    name: 'Discovering the type of collaborative interaction to solve the problem, along with goals',
+    description: 'Children discover that this task requires working together, not just side-by-side, and identify what the shared goal actually is — including the scoring incentive and what "success" looks like.',
+    observables: [
+      'Silence at task start with no goal-oriented speech',
+      'Children examining pieces independently without discussing purpose',
+      'No mention of scoring criteria or what they\'re trying to achieve',
+      'Activity resembles free play rather than goal-directed work',
+    ],
+    triggers: ['T1'],
+    utterances: [
+      { label: 'Maze task', text: 'What are you two trying to build together? Remember, the more dead ends and corners you make, the more points you get!' },
+      { label: 'Park task', text: 'What kind of park are you two making? The more unique things you add, the more points you\'ll earn together.' },
+    ],
+  },
+  A3: {
+    dim: 'A · Exploring and understanding',
+    col: 'pisa-A',
+    colvar: 'var(--pisa-a)',
+    coll: 'var(--pisa-a-l)',
+    name: 'Understanding roles to solve the problem',
+    description: 'Children understand that collaborative problem-solving requires differentiated contributions — that each person plays a part in reaching the goal, even when no formal roles are assigned.',
+    observables: [
+      'Both children building the same section without coordination',
+      'No acknowledgment that the other person exists as a collaborator',
+      'Parallel play pattern (early phase)',
+      'Neither child attempts to coordinate or check in with the other',
+    ],
+    triggers: ['T5'],
+    utterances: [
+      { label: 'General', text: 'You two could probably build more if you each work on different parts. Have you thought about splitting things up?' },
+      { label: 'General', text: 'I wonder if it would help to decide who\'s building and who\'s planning. What do you think?' },
+    ],
+  },
+  B1: {
+    dim: 'B · Representing and formulating',
+    col: 'pisa-B',
+    colvar: 'var(--pisa-b)',
+    coll: 'var(--pisa-b-l)',
+    name: 'Building a shared representation and negotiating the meaning of the problem (common ground)',
+    description: 'Children work to build a single, shared mental model of what the problem is and what a good solution looks like. Disagreements need to be negotiated into common ground — not just won by whoever speaks louder.',
+    observables: [
+      'Verbal conflict about design direction ("no, let\'s do it THIS way")',
+      'Two competing visions being built simultaneously',
+      'One child overriding the other\'s construction without discussion',
+      'Repeated disagreement about what the final structure should look like',
+    ],
+    triggers: ['T3'],
+    utterances: [
+      { label: 'Maze task', text: 'I heard you two disagree about where the walls go. Can you each say your idea and then pick one together?' },
+      { label: 'Park task', text: 'You both have different ideas! What if you combined them — could the park have both of those things?' },
+    ],
+  },
+  B2: {
+    dim: 'B · Representing and formulating',
+    col: 'pisa-B',
+    colvar: 'var(--pisa-b)',
+    coll: 'var(--pisa-b-l)',
+    name: 'Identifying and describing tasks to be completed',
+    description: 'Children identify and articulate the specific subtasks that need to be done to complete the overall goal — breaking the problem into actionable steps they can each address.',
+    observables: [
+      'Goal has been stated but no one names the next step',
+      'Silence after a goal discussion — no transition to action',
+      'Children look at pieces without deciding what to build first',
+      '"I don\'t know what to do" without a partner offering direction',
+    ],
+    triggers: ['T1'],
+    utterances: [
+      { label: 'Maze task', text: 'You know what you\'re making — so what should you build first? The outer walls, or the pathways inside?' },
+      { label: 'Park task', text: 'You\'ve got a great park idea! What\'s the first thing you want to build? Start with one piece and go from there.' },
+    ],
+  },
+  B3: {
+    dim: 'B · Representing and formulating',
+    col: 'pisa-B',
+    colvar: 'var(--pisa-b)',
+    coll: 'var(--pisa-b-l)',
+    name: 'Describing roles and team organisation (communication protocol / rules of engagement)',
+    description: 'Children establish how the team will operate: who communicates what to whom, how decisions get made, and what the rules of engagement are for building together.',
+    observables: [
+      'Silence about how to divide labor after goal is stated',
+      'Conflict about whose idea takes precedence',
+      'No protocol for turn-taking in decisions or construction',
+      'Parallel building without agreed coordination structure',
+    ],
+    triggers: ['T1', 'T3', 'T5'],
+    utterances: [
+      { label: 'General', text: 'Who\'s going to decide where things go? It helps to have one person planning and one person building.' },
+      { label: 'General', text: 'Maybe you can take turns deciding? One of you picks the next part, then the other one does.' },
+    ],
+  },
+  C1: {
+    dim: 'C · Planning and executing',
+    col: 'pisa-C',
+    colvar: 'var(--pisa-c)',
+    coll: 'var(--pisa-c-l)',
+    name: 'Communicating with team members about the actions to be / being performed',
+    description: 'Children actively narrate what they are doing, plan to do, or need their partner to do. Ongoing communication about actions keeps both children\'s models in sync during execution.',
+    observables: [
+      'Silence during active building — no narration or check-ins',
+      'Children building without telling each other their plan',
+      'Stall with no action proposed or verbalized',
+      'Actions taken without informing partner',
+    ],
+    triggers: ['T4', 'T5'],
+    utterances: [
+      { label: 'General', text: 'Can you tell your partner what you\'re about to build next? It helps to say it out loud.' },
+      { label: 'General', text: 'Hey, what are you two working on right now? Tell each other your plan!' },
+    ],
+  },
+  C2: {
+    dim: 'C · Planning and executing',
+    col: 'pisa-C',
+    colvar: 'var(--pisa-c)',
+    coll: 'var(--pisa-c-l)',
+    name: 'Enacting plans',
+    description: 'Children follow through on agreed plans — translating decisions into actual building actions. A post-subtask stall often means they have a plan but haven\'t enacted the next step yet.',
+    observables: [
+      'Plan has been verbalized but no one starts building',
+      'Pause after completing one section — ready to move but stalled',
+      'Decision made but hands remain idle',
+      '"So what do we do now?" without action following',
+    ],
+    triggers: ['T4'],
+    utterances: [
+      { label: 'General', text: 'You know what you want to do — so go for it! Start building that next part.' },
+      { label: 'General', text: 'Sounds like you have a plan. Who\'s going to start that next piece?' },
+    ],
+  },
+  C3: {
+    dim: 'C · Planning and executing',
+    col: 'pisa-C',
+    colvar: 'var(--pisa-c)',
+    coll: 'var(--pisa-c-l)',
+    name: 'Following rules of engagement (e.g. prompting other team members to perform their tasks)',
+    description: 'Children uphold the collaborative structure by prompting each other, maintaining agreed-upon roles, and ensuring both members are contributing. When one child goes passive, the other should prompt them — or JIBO does.',
+    observables: [
+      'One child passive / watching while the other builds alone',
+      'No one prompting the disengaged child to participate',
+      'Dominant child completing partner\'s tasks without prompting them',
+      'Partner excluded from decision-making for extended period',
+    ],
+    triggers: ['T2', 'T5'],
+    utterances: [
+      { label: 'General', text: '[Quiet child], what do you think about what [partner] is building? Do you want to add something?' },
+      { label: 'General', text: 'I notice [quiet child] hasn\'t had a turn yet. [Quiet child], what do you want to build next?' },
+    ],
+  },
+  D1: {
+    dim: 'D · Monitoring and reflecting',
+    col: 'pisa-D',
+    colvar: 'var(--pisa-d)',
+    coll: 'var(--pisa-d-l)',
+    name: 'Monitoring and repairing the shared understanding',
+    description: 'Children notice when shared understanding has broken down — due to conflict, confusion, or drift — and actively work to repair it. This requires recognizing the breakdown, not just moving past it.',
+    observables: [
+      'Stall following a verbal conflict (understanding broken, not repaired)',
+      'Children pursuing incompatible interpretations of the task',
+      'Disagreement about what the problem requires or what was decided',
+      'One child acting on an interpretation the other hasn\'t accepted',
+    ],
+    triggers: ['T3', 'T4'],
+    utterances: [
+      { label: 'General', text: 'It sounds like you two have different ideas about what you\'re building. Can you check in — do you both agree on the plan?' },
+      { label: 'General', text: 'Before you keep going, do you both understand what you\'re making together? Maybe talk it through for a second.' },
+    ],
+  },
+  D2: {
+    dim: 'D · Monitoring and reflecting',
+    col: 'pisa-D',
+    colvar: 'var(--pisa-d)',
+    coll: 'var(--pisa-d-l)',
+    name: 'Monitoring results of actions and evaluating success in solving the problem',
+    description: 'Children step back to assess what they\'ve built against their goals — asking whether their current structure achieves what they set out to do, and whether they\'re earning the points they aimed for.',
+    observables: [
+      'Stall after completing a visible section',
+      'No evaluation of completed section before moving on',
+      'Children unsure if what they built "counts" or is good enough',
+      'No reference to scoring criteria during or after building',
+    ],
+    triggers: ['T4'],
+    utterances: [
+      { label: 'Maze task', text: 'You\'ve built a good section — take a look at it together. Are there enough dead ends? Does the path work?' },
+      { label: 'Park task', text: 'Look at what you\'ve made so far! Do you think you\'ve added enough unique things? What else could you add?' },
+    ],
+  },
+  D3: {
+    dim: 'D · Monitoring and reflecting',
+    col: 'pisa-D',
+    colvar: 'var(--pisa-d)',
+    coll: 'var(--pisa-d-l)',
+    name: 'Monitoring, providing feedback and adapting the team organisation and roles',
+    description: 'Children reflect on how the team is working and actively adjust — redistributing tasks, changing how they communicate, or reassigning who does what — in response to how the collaboration is going.',
+    observables: [
+      'Late-task conflict about roles that have drifted',
+      'Parallel work in P4 — no shared review or role recalibration',
+      'Team has been operating in a dysfunctional pattern that needs addressing',
+      'One child doing everything while the other tries to re-engage',
+    ],
+    triggers: ['T3', 'T5'],
+    utterances: [
+      { label: 'General', text: 'How is the teamwork going? Is the way you\'re working together still helping you build more? Maybe it\'s time to switch things up.' },
+      { label: 'General', text: 'Are you both happy with how you\'re sharing the work? It might help to check in about that.' },
+    ],
+  },
+};
+
+function showPisaDetail(cell) {
+  const d = PISA[cell];
+  if (!d) return;
+
+  document.getElementById('detail-empty').style.display = 'none';
+  const dc = document.getElementById('detail-content');
+  dc.classList.add('visible');
+
+  const trigColors = {T1:'var(--t1)',T2:'var(--t2)',T3:'var(--t3)',T4:'var(--t4)',T5:'var(--t5)'};
+  const trigBg = {T1:'var(--t1-l)',T2:'var(--t2-l)',T3:'var(--t3-l)',T4:'var(--t4-l)',T5:'var(--t5-l)'};
+
+  const triggeredBy = d.triggers.map(t =>
+    `<span class="trigger-badge" style="background:${trigBg[t]};color:${trigColors[t]};border:1px solid ${trigColors[t]}40;">${t}</span>`
+  ).join('');
+
+  const utterancesHTML = d.utterances.map(u =>
+    `<div class="utterance-box"><div class="utterance-label">${u.label}</div>"${u.text}"</div>`
+  ).join('');
+
+  const observableTagsHTML = d.observables.map(o =>
+    `<div class="observable-tag">${o}</div>`
+  ).join('');
+
+  dc.innerHTML = `
+    <div class="detail-header">
+      <div class="detail-cell-id ${d.col}" style="color:${d.colvar}">${cell}</div>
+      <div class="detail-cell-name">${d.name}</div>
+      <div class="detail-cell-dim" style="color:${d.colvar}">${d.dim}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Description</div>
+      <p>${d.description}</p>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Observable signals in Lego task</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;">${observableTagsHTML}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Reached via trigger</div>
+      <div>${triggeredBy}</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Sample JIBO utterances</div>
+      ${utterancesHTML}
+      <p style="font-size:11px;color:var(--text3);margin-top:8px;">Note: utterances are placeholders for structure only. Final wording to be refined in LLM prompt engineering phase.</p>
+    </div>
+  `;
+}
+
+function toggleTrigger(id) {
+  const node = document.getElementById('node-' + id);
+  node.classList.toggle('expanded');
+}
+
+let activeTrigger = 'all';
+let activePhase = 'all';
+
+function filterTrigger(id) {
+  activeTrigger = id;
+  document.querySelectorAll('[id^="filter-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('filter-' + id).classList.add('active');
+  applyFilters();
+}
+
+function filterPhase(phase) {
+  activePhase = phase;
+  document.querySelectorAll('[id^="phase-"]').forEach(b => b.classList.remove('active'));
+  document.getElementById('phase-' + phase).classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  const nodes = document.querySelectorAll('.trigger-node');
+  nodes.forEach(n => {
+    const t = n.dataset.trigger;
+    const phases = n.dataset.phases || '';
+    const triggerMatch = activeTrigger === 'all' || t === activeTrigger;
+    const phaseMatch = activePhase === 'all' || phases.includes(activePhase);
+    if (triggerMatch && phaseMatch) {
+      n.style.opacity = '1';
+      n.style.pointerEvents = 'auto';
+    } else {
+      n.style.opacity = '0.25';
+      n.style.pointerEvents = 'none';
+    }
+  });
+
+  // Auto-expand if only one trigger is selected
+  if (activeTrigger !== 'all') {
+    document.querySelectorAll('.trigger-node').forEach(n => n.classList.remove('expanded'));
+    const target = document.getElementById('node-' + activeTrigger);
+    if (target) target.classList.add('expanded');
+  }
+}
+</script>
+</body>
+</html>
